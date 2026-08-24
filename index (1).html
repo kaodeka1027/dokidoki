@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#12100F">
+<title>どきどきルーレット</title>
+<meta name="description" content="飲み会やパーティーで、罰ゲームの担当をランダムに決めるゲーム。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="どきどきルーレット">
+<meta property="og:description" content="心臓に悪い数秒。罰ゲームの担当をランダムに決めます。">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23150C12%22/><circle cx=%2232%22 cy=%2232%22 r=%2220%22 fill=%22none%22 stroke=%22%23C8A24B%22 stroke-width=%223%22/><circle cx=%2232%22 cy=%2216%22 r=%224%22 fill=%22%23D8391C%22/><circle cx=%2245%22 cy=%2224%22 r=%224%22 fill=%22%23C8A24B%22/><circle cx=%2245%22 cy=%2240%22 r=%224%22 fill=%22%23C8A24B%22/><circle cx=%2232%22 cy=%2248%22 r=%224%22 fill=%22%23C8A24B%22/><circle cx=%2219%22 cy=%2240%22 r=%224%22 fill=%22%23C8A24B%22/><circle cx=%2219%22 cy=%2224%22 r=%224%22 fill=%22%23C8A24B%22/></svg>">
+<style>
+  :root{
+    --ink:#12100F;
+    --brass:#C8A24B;
+    --brass-dim:#7A6430;
+    --bone:#EFE7DA;
+    --slate:#8A8279;
+    --ember:#D8391C;
+    --display:"Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN W4","Rounded Mplus 1c","Yu Gothic",sans-serif;
+    --sans:"Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN W4","Rounded Mplus 1c","Hiragino Sans","Yu Gothic",sans-serif;
+    --num:"Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN W4","Avenir Next Rounded","Avenir Next",sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  html,body{
+    height:100%;
+    overscroll-behavior:none;
+    -webkit-text-size-adjust:100%;
+  }
+
+  body{
+    min-height:100vh;
+    min-height:100dvh;
+    background:radial-gradient(110% 70% at 50% 24%, #262120 0%, transparent 62%), var(--ink);
+    color:var(--bone);
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+    display:flex;justify-content:center;
+    padding:calc(env(safe-area-inset-top) + 14px)
+            calc(env(safe-area-inset-right) + 14px)
+            calc(env(safe-area-inset-bottom) + 18px)
+            calc(env(safe-area-inset-left) + 14px);
+    overflow-x:hidden;
+    -webkit-user-select:none;user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+
+  .stage{width:100%;max-width:860px;display:flex;flex-direction:column;align-items:center;gap:14px}
+
+  .masthead{text-align:center}
+  .eyebrow{
+    font-family:var(--sans);font-weight:700;font-size:14px;letter-spacing:.06em;
+    color:#C9A661;margin-bottom:7px;
+    text-shadow:0 1.5px 0 #4A3208, 0 2.5px 4px rgba(0,0,0,.5);
+  }
+  .wordmark{
+    font-family:var(--display);font-weight:600;
+    font-size:clamp(25px,6.6vw,36px);
+    letter-spacing:.05em;text-indent:.05em;
+    color:var(--brass);
+  }
+
+  /* どきどき：一文字ずつ傾けて厚みを出す */
+  .wordmark .beat{
+    display:inline-block;
+    font-size:1.32em;
+    font-weight:800;
+    color:var(--ember);
+    -webkit-text-fill-color:#FF5A32;
+    -webkit-text-stroke:2px #6E1105;
+    paint-order:stroke fill;
+    letter-spacing:-.02em;
+    text-shadow:
+      0 2px 0 #8E1A08,
+      0 4px 0 #6E1105,
+      0 6px 12px rgba(216,57,28,.55);
+    animation:logobeat 1.5s ease-in-out infinite;
+  }
+
+  .wordmark .beat:nth-child(1){transform:rotate(-7deg)}
+  .wordmark .beat:nth-child(2){transform:rotate(5deg);animation-delay:.05s}
+  .wordmark .beat:nth-child(3){transform:rotate(-4deg);animation-delay:.16s}
+  .wordmark .beat:nth-child(4){transform:rotate(7deg);animation-delay:.21s}
+
+  .wordmark .tail{
+    display:inline-block;
+    margin-left:.16em;
+    font-weight:800;
+    -webkit-text-fill-color:#F0DCAE;
+    color:#F0DCAE;
+    -webkit-text-stroke:2px #4A3410;
+    paint-order:stroke fill;
+    text-shadow:
+      0 2px 0 #6B4C18,
+      0 4px 0 #4A3410,
+      0 6px 10px rgba(0,0,0,.5);
+  }
+
+  @keyframes logobeat{
+    0%,58%,100%{scale:1;translate:0 0}
+    11%{scale:1.3;translate:0 -5px}
+    24%{scale:1.04;translate:0 0}
+    36%{scale:1.17;translate:0 -3px}
+  }
+
+
+  /* ── 文字の立体感（全体共通） ── */
+  .status-main{
+    -webkit-text-stroke:2px #241A12;
+    paint-order:stroke fill;
+    text-shadow:0 2px 0 #3A2A1C, 0 4px 0 #241A12, 0 6px 12px rgba(0,0,0,.5);
+  }
+
+  .status-main.bang{
+    -webkit-text-stroke:2px #5C1206;
+    text-shadow:0 2px 0 #8E1A08, 0 4px 0 #5C1206, 0 5px 22px rgba(216,57,28,.6);
+  }
+
+  .status-main.safe{
+    -webkit-text-stroke:2px #143720;
+    text-shadow:0 2px 0 #22502F, 0 4px 0 #143720, 0 5px 18px rgba(126,203,143,.35);
+  }
+
+  .status-sub, .eyebrow, .hint, .sound{
+    font-weight:700;
+    -webkit-text-stroke:1.5px #1A1512;
+    paint-order:stroke fill;
+    text-shadow:0 1.5px 0 #2B2119, 0 3px 0 #1A1512;
+  }
+
+  .dial-jp{
+    -webkit-text-stroke:1.8px #3D2C10;
+    paint-order:stroke fill;
+    text-shadow:0 2px 0 #5E4519, 0 3.5px 0 #3D2C10;
+  }
+
+  .dial-value{
+    -webkit-text-stroke:2px #241A12;
+    paint-order:stroke fill;
+    text-shadow:0 2px 0 #3D2E20, 0 4px 0 #241A12, 0 6px 10px rgba(0,0,0,.45);
+  }
+
+  .btn{
+    -webkit-text-stroke:1.6px #3D2C10;
+    paint-order:stroke fill;
+    text-shadow:0 2px 0 #5E4519, 0 3.5px 0 #3D2C10;
+    box-shadow:0 4px 0 rgba(0,0,0,.45);
+  }
+
+  .btn:active:not(:disabled){box-shadow:0 1px 0 rgba(0,0,0,.45)}
+
+  .btn.primary{
+    -webkit-text-stroke:1.6px #6E5A22;
+    text-shadow:0 2px 0 #E8D08C, 0 3px 0 #A98D3C;
+    box-shadow:inset 0 -4px 0 rgba(0,0,0,.22), 0 4px 0 rgba(0,0,0,.5);
+  }
+
+  .btn.primary:active:not(:disabled){box-shadow:inset 0 -2px 0 rgba(0,0,0,.22), 0 1px 0 rgba(0,0,0,.5)}
+
+  .trigger{
+    -webkit-text-stroke:1.8px #5C1206;
+    text-shadow:0 2px 0 #8E1A08, 0 4px 0 #5C1206;
+  }
+
+  .btn.ghost{
+    -webkit-text-stroke:1.5px #2B2622;
+    text-shadow:0 2px 0 #45403A, 0 3.5px 0 #2B2622;
+  }
+
+  .step{
+    -webkit-text-stroke:1.8px #3D2C10;
+    paint-order:stroke fill;
+    text-shadow:0 2px 0 #5E4519, 0 3px 0 #3D2C10;
+    box-shadow:0 3px 0 rgba(0,0,0,.4);
+  }
+
+  .step:active:not(:disabled){box-shadow:0 1px 0 rgba(0,0,0,.4)}
+
+  /* ── 銃 ─────────────────────────── */
+  .frame-box{
+    position:relative;width:100%;border-radius:4px;
+    background:radial-gradient(66% 130% at 47% 48%, #2C2624 0%, transparent 66%), linear-gradient(#1A1716,#0C0B0B);
+    box-shadow:inset 0 0 0 1px rgba(200,162,75,.14), 0 20px 46px rgba(0,0,0,.55);
+    overflow:hidden;
+  }
+
+  .frame-box svg{display:block;width:100%;height:auto}
+
+  .vignette{
+    position:absolute;inset:0;pointer-events:none;opacity:0;
+    background:radial-gradient(circle at 50% 50%, transparent 16%, rgba(0,0,0,.55) 52%, rgba(0,0,0,.94) 84%);
+    transition:opacity 1.6s ease;
+  }
+
+  .vignette.on{opacity:1}
+  .vignette.snap{transition:opacity .1s ease}
+
+  .pulse{
+    position:absolute;inset:-14%;pointer-events:none;opacity:0;
+    border-radius:50%;
+    background:radial-gradient(closest-side,
+      rgba(216,57,28,0) 52%,
+      rgba(216,57,28,.42) 74%,
+      rgba(255,90,50,.72) 88%,
+      rgba(216,57,28,0) 100%);
+    transform:scale(.97);
+    transition:opacity .3s ease, transform .3s ease;
+  }
+
+  /* 心拍に合わせて広がる輪 */
+  .ring{
+    position:absolute;left:50%;top:50%;pointer-events:none;
+    width:32%;aspect-ratio:1;margin:-16% 0 0 -16%;
+    border-radius:50%;
+    border:2px solid rgba(255,104,66,.85);
+    opacity:0;
+  }
+
+  .ring.go{animation:ringout .72s cubic-bezier(.15,.7,.35,1)}
+
+  @keyframes ringout{
+    0%{opacity:.85;transform:scale(.5)}
+    100%{opacity:0;transform:scale(3.4)}
+  }
+
+  .heat{
+    position:fixed;inset:0;pointer-events:none;z-index:8;opacity:0;
+    background:radial-gradient(125% 95% at 50% 44%, transparent 24%, rgba(158,24,12,.6) 100%);
+    transition:opacity 2.6s ease;
+  }
+
+  .frame-box.tr1 svg{animation:tr1 .15s linear infinite}
+  .frame-box.tr2 svg{animation:tr2 .1s linear infinite}
+  .frame-box.tr3 svg{animation:tr3 .066s linear infinite}
+
+  @keyframes tr1{0%,100%{transform:translate(-1px,0)}50%{transform:translate(1px,.5px)}}
+  @keyframes tr2{0%,100%{transform:translate(-2.6px,1px)}50%{transform:translate(2.6px,-1px)}}
+  @keyframes tr3{0%,100%{transform:translate(-5px,1.5px)}33%{transform:translate(4.5px,-2.5px)}66%{transform:translate(-2px,3px)}}
+
+  .jolt{animation:jolt .17s ease-out}
+
+  @keyframes jolt{
+    0%{transform:translate(0,0)}
+    28%{transform:translate(-9px,4px)}
+    100%{transform:translate(0,0)}
+  }
+
+  #ember{opacity:0;transition:opacity .6s ease}
+
+  #zoom{transition:transform 2.2s cubic-bezier(.3,.5,.4,1)}
+  #zoom.snapback{transition:transform .5s cubic-bezier(.2,1.3,.4,1)}
+  #cyl{transition:transform .34s cubic-bezier(.25,.9,.3,1)}
+  #hammer{transition:transform .3s cubic-bezier(.3,.8,.4,1)}
+  #trig{transition:transform .2s ease-out}
+  #recoil{transition:transform .13s ease-out}
+
+  #flash-g{opacity:0;transform-box:fill-box;transform-origin:0% 50%}
+  #flash-g.fire{animation:mz .2s ease-out}
+
+  @keyframes mz{
+    0%{opacity:1;transform:scale(.3)}
+    45%{opacity:1;transform:scale(1.15)}
+    100%{opacity:0;transform:scale(1.7)}
+  }
+
+  #wave{opacity:0;transform-box:fill-box;transform-origin:center}
+  #wave.go{animation:wave .55s cubic-bezier(.1,.7,.3,1)}
+
+  @keyframes wave{
+    0%{opacity:.85;transform:scale(.06)}
+    100%{opacity:0;transform:scale(1)}
+  }
+
+  #smoke{opacity:0}
+  #smoke.go{animation:smoke 1.9s ease-out}
+
+  @keyframes smoke{
+    0%{opacity:0;transform:translate(0,0) scale(.4)}
+    16%{opacity:.5}
+    100%{opacity:0;transform:translate(58px,-58px) scale(2.3)}
+  }
+
+  #hammerTense{animation:none}
+  .tense #hammer{animation:jitter .1s linear infinite}
+
+  @keyframes jitter{
+    0%,100%{transform:rotate(-34deg) translateX(-.5px)}
+    50%{transform:rotate(-34.6deg) translateX(.5px)}
+  }
+
+  /* ── 実況 ───────────────────────── */
+  .status{text-align:center;min-height:3em;display:flex;flex-direction:column;justify-content:center;gap:6px}
+
+  .status-main{
+    font-family:var(--display);font-weight:600;
+    font-size:clamp(20px,5.4vw,27px);
+    letter-spacing:.02em;line-height:1.45;
+    color:var(--bone);
+    -webkit-text-stroke:1.6px #2A1D14;
+    paint-order:stroke fill;
+    text-shadow:0 2px 0 #3E2C1E, 0 3px 0 #2A1D14, 0 5px 10px rgba(0,0,0,.55);
+    transition:letter-spacing .8s ease, transform .3s ease;
+  }
+  .status-main.bang{
+    color:#FF5A32;
+    -webkit-text-stroke:1.8px #5E0F04;
+    text-shadow:0 2px 0 #8E1A08, 0 4px 0 #5E0F04, 0 0 26px rgba(216,57,28,.6);
+    animation:bangpop .42s cubic-bezier(.2,1.7,.4,1);
+  }
+
+  @keyframes bangpop{
+    0%{transform:scale(.7)}
+    55%{transform:scale(1.16)}
+    100%{transform:scale(1)}
+  }
+
+  .status-main.safe{
+    color:#8FDCA0;
+    -webkit-text-stroke:1.8px #143D1F;
+    text-shadow:0 2px 0 #226034, 0 4px 0 #143D1F, 0 0 20px rgba(126,203,143,.3);
+  }
+  .status-main.hold{letter-spacing:.6em;color:var(--slate)}
+
+  .status-sub{
+    font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:.06em;
+    color:#9A9188;text-shadow:0 1.5px 0 rgba(0,0,0,.5);
+  }
+
+  /* ── 操作 ───────────────────────── */
+  .panel{width:100%;max-width:640px;display:flex;flex-direction:column;gap:14px}
+  .panel[hidden]{display:none}
+
+  .dials{display:flex;gap:12px}
+
+  .dial{
+    flex:1;background:linear-gradient(#211D1B,#181514);
+    border:1px solid rgba(200,162,75,.18);border-radius:3px;
+    padding:12px 10px 14px;text-align:center;
+  }
+
+  .dial-label{display:none}
+  .dial-jp{
+    font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:.08em;
+    color:#F0CE7E;
+    -webkit-text-stroke:1.4px #45300A;
+    paint-order:stroke fill;
+    text-shadow:0 2px 0 #6E4E12, 0 3px 0 #45300A, 0 4px 7px rgba(0,0,0,.5);
+  }
+  .dial-row{margin-top:9px;display:flex;align-items:center;justify-content:center;gap:6px}
+
+  .step{
+    width:42px;height:42px;flex:none;border:2px solid rgba(200,162,75,.35);
+    border-radius:50%;background:transparent;color:var(--brass);
+    font-family:var(--num);font-weight:800;font-size:22px;line-height:1;cursor:pointer;
+    text-shadow:0 2px 0 rgba(0,0,0,.4);
+    box-shadow:0 3px 0 rgba(0,0,0,.4), 0 5px 10px rgba(0,0,0,.3);
+    transition:background .18s ease,color .18s ease,opacity .18s ease,
+               transform .1s ease, box-shadow .1s ease;
+  }
+
+  .step:hover:not(:disabled){background:var(--brass);color:var(--ink)}
+  .step:disabled{opacity:.24;cursor:default}
+  .step:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+
+  .dial-value{
+    font-family:var(--num);font-size:40px;font-weight:800;line-height:1;min-width:58px;
+    color:#FFF6E4;
+    -webkit-text-stroke:2px #2A1D14;
+    paint-order:stroke fill;
+    text-shadow:0 3px 0 #4A3527, 0 5px 0 #2A1D14, 0 7px 12px rgba(0,0,0,.55);
+  }
+
+  .actions{display:flex;gap:10px;width:100%}
+
+  .btn{
+    flex:1;padding:17px 18px;border:2px solid var(--brass);border-radius:999px;
+    background:transparent;color:var(--brass);font-family:var(--display);
+    font-weight:800;font-size:16px;letter-spacing:.06em;cursor:pointer;
+    text-shadow:0 2px 0 rgba(0,0,0,.45);
+    box-shadow:0 4px 0 rgba(0,0,0,.42), 0 6px 14px rgba(0,0,0,.35);
+    transition:background .2s ease,color .2s ease,opacity .2s ease,
+               transform .1s ease, box-shadow .1s ease;
+  }
+
+  .btn:hover:not(:disabled){background:var(--brass);color:var(--ink)}
+  .btn:focus-visible{outline:2px solid var(--bone);outline-offset:3px}
+  .btn:disabled{opacity:.32;cursor:default}
+  .btn.primary{
+    background:linear-gradient(#E4C374,var(--brass) 52%,#9C7A2C);
+    color:#2A1F08;
+    border-color:#E4C374;
+    text-shadow:0 1px 0 rgba(255,255,255,.4);
+    box-shadow:0 4px 0 #6E5420, 0 7px 16px rgba(0,0,0,.4);
+  }
+  .btn.primary:hover:not(:disabled){background:#E0BC68;border-color:#E0BC68}
+  .btn.ghost{
+    border-color:rgba(138,130,121,.45);color:#B4ABA1;
+    box-shadow:0 4px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.28);
+  }
+  .btn.ghost:hover{background:rgba(138,130,121,.16);color:var(--bone)}
+
+  .trigger{
+    padding:21px;font-size:19px;letter-spacing:.08em;
+    border-color:#FF6A45;
+    background:linear-gradient(#F2532F,#C42B10 58%,#8E1A08);
+    color:#FFF0EA;font-weight:800;
+    -webkit-text-stroke:0;
+    text-shadow:0 2px 0 rgba(0,0,0,.45);
+    box-shadow:0 5px 0 #6E1105, 0 9px 20px rgba(216,57,28,.4);
+    animation:ready 1.9s ease-out infinite;
+  }
+
+  .trigger:active:not(:disabled){
+    transform:translateY(5px);
+    box-shadow:0 0 0 #6E1105, 0 3px 8px rgba(216,57,28,.3);
+  }
+
+  @keyframes ready{
+    0%{box-shadow:0 5px 0 #6E1105, 0 9px 20px rgba(216,57,28,.4), 0 0 0 0 rgba(216,57,28,.5)}
+    70%{box-shadow:0 5px 0 #6E1105, 0 9px 20px rgba(216,57,28,.4), 0 0 0 18px rgba(216,57,28,0)}
+    100%{box-shadow:0 5px 0 #6E1105, 0 9px 20px rgba(216,57,28,.4), 0 0 0 0 rgba(216,57,28,0)}
+  }
+
+  .trigger:disabled{animation:none}
+  .trigger:hover:not(:disabled){background:linear-gradient(#FF6B44,#D63417 58%,#9E2009);color:#fff}
+
+  .hint{
+    font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.04em;
+    color:var(--slate);text-align:center;text-shadow:0 1.5px 0 rgba(0,0,0,.5);
+  }
+
+  .sound{
+    background:none;border:0;cursor:pointer;font-family:var(--num);
+    font-weight:700;font-size:12px;letter-spacing:.04em;
+    color:var(--slate);padding:8px 6px;
+    text-shadow:0 1.5px 0 rgba(0,0,0,.5);
+  }
+
+  .sound:hover{color:var(--brass)}
+  .sound:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+
+  .flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:9}
+  .flash.fire{animation:flash .6s ease-out}
+
+  @keyframes flash{
+    0%{opacity:1;background:#fff}
+    12%{opacity:.75;background:#FFE9C0}
+    34%{opacity:.34;background:var(--ember)}
+    100%{opacity:0;background:var(--ember)}
+  }
+
+  .shake{animation:shake .62s cubic-bezier(.36,.07,.19,.97)}
+
+  @keyframes shake{
+    8%{transform:translate(-5px,3px) scale(1.012)}
+    16%{transform:translate(9px,-4px) scale(1.012)}
+    26%{transform:translate(-14px,3px) scale(1.008)}
+    36%{transform:translate(13px,-2px)}
+    48%{transform:translate(-9px,2px)}
+    60%{transform:translate(6px,-1px)}
+    74%{transform:translate(-4px,1px)}
+    88%{transform:translate(2px,0)}
+    100%{transform:translate(0,0)}
+  }
+
+  /* ── タッチ端末：hover の焼き付きを防ぎ、押した手応えを出す ── */
+  @media (hover:none){
+    .btn:hover:not(:disabled){background:transparent;color:var(--brass)}
+    .btn.primary:hover:not(:disabled){background:var(--brass);color:var(--ink)}
+    .trigger:hover:not(:disabled){background:linear-gradient(#F2532F,#C42B10 58%,#8E1A08);color:#FFF0EA}
+    .step:hover:not(:disabled){background:transparent;color:var(--brass)}
+    .sound:hover{color:var(--slate)}
+  }
+
+  .btn:active:not(:disabled){
+    transform:translateY(4px);
+    box-shadow:0 0 0 rgba(0,0,0,.42), 0 2px 6px rgba(0,0,0,.3);
+  }
+  .btn.primary:active:not(:disabled){background:#E0BC68}
+
+  .step:active:not(:disabled){
+    background:var(--brass);color:var(--ink);
+    transform:translateY(3px);
+    box-shadow:0 0 0 rgba(0,0,0,.4), 0 2px 5px rgba(0,0,0,.3);
+  }
+
+  .btn,.step,.sound{
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+    position:relative;z-index:6;pointer-events:auto;
+  }
+
+  .panel,.dials,.actions{position:relative;z-index:6}
+
+  /* 銃そのものも引き金として押せる */
+  .frame-box{cursor:pointer}
+  .frame-box.armed{box-shadow:inset 0 0 0 1px rgba(216,57,28,.4), 0 20px 46px rgba(0,0,0,.55)}
+
+  /* ── 小さい画面 ── */
+  @media (max-width:520px){
+    .stage{gap:11px}
+    .wordmark{font-size:24px;letter-spacing:.14em;text-indent:.14em}
+    .eyebrow{font-size:10px;letter-spacing:.26em}
+    .dial{padding:10px 6px 12px}
+    .dial-value{font-size:32px;min-width:48px}
+    .step{width:44px;height:44px;font-size:20px}
+    .status{min-height:3.4em}
+    .btn{padding:17px 12px;font-size:14px;letter-spacing:.14em;text-indent:.14em}
+    .trigger{padding:22px 12px;font-size:16px}
+    .status-main{font-size:18px}
+  }
+
+  @media (max-width:360px){
+    .dial-jp{font-size:12px}
+    .dial-value{font-size:28px;min-width:42px}
+    .step{width:40px;height:40px}
+  }
+
+  /* ── 横向き：縦を節約する ── */
+  @media (orientation:landscape) and (max-height:520px){
+    .stage{gap:8px;max-width:640px}
+    .masthead{display:none}
+    .status{min-height:2.2em}
+    .btn{padding:13px 14px}
+    .trigger{padding:15px 14px}
+    .hint{display:none}
+    .dial{padding:8px 8px 10px}
+    .dial-value{font-size:26px}
+    .sound{padding:2px}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important;transition-duration:.01ms !important}
+  }
+</style>
+</head>
+<body>
+<noscript>
+  <div style="position:fixed;inset:0;z-index:99;background:#12100F;color:#EFE7DA;
+              display:flex;align-items:center;justify-content:center;padding:28px;
+              font-family:'Hiragino Maru Gothic ProN','Hiragino Sans',sans-serif;text-align:center">
+    <div style="max-width:420px;line-height:1.85">
+      <p style="font-size:21px;color:#C8A24B;margin-bottom:14px">Safari で開いてください</p>
+      <p style="font-size:15px">いまはファイルのプレビュー画面で表示されています。<br>
+      この画面ではボタンが動きません。</p>
+      <p style="font-size:15px;margin-top:14px">配布用の URL から開くと、そのまま遊べます。</p>
+    </div>
+  </div>
+</noscript>
+
+
+<div class="heat" id="heat"></div>
+<div class="flash" id="flash"></div>
+
+<main class="stage" id="stage">
+
+  <header class="masthead">
+    <p class="eyebrow" id="eyebrow">6人 で あたり 1つ</p>
+    <h1 class="wordmark"><span class="beat">ど</span><span class="beat">き</span><span class="beat">ど</span><span class="beat">き</span><span class="tail">ルーレット</span></h1>
+  </header>
+
+  <div class="frame-box">
+    <svg id="svg" viewBox="150 84 640 300" role="img" aria-label="リボルバーの側面図">
+      <defs>
+        <linearGradient id="gSteel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#5E646C"/>
+          <stop offset="34%" stop-color="#33383E"/>
+          <stop offset="100%" stop-color="#14171A"/>
+        </linearGradient>
+        <linearGradient id="gSteel2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#4B5158"/>
+          <stop offset="60%" stop-color="#262A2F"/>
+          <stop offset="100%" stop-color="#101214"/>
+        </linearGradient>
+        <radialGradient id="gCyl" cx="36%" cy="28%" r="80%">
+          <stop offset="0%" stop-color="#6B727A"/>
+          <stop offset="50%" stop-color="#343A40"/>
+          <stop offset="100%" stop-color="#13161A"/>
+        </radialGradient>
+        <linearGradient id="gWood" x1="0.1" y1="0" x2="0.9" y2="1">
+          <stop offset="0%" stop-color="#6A422F"/>
+          <stop offset="48%" stop-color="#3F2618"/>
+          <stop offset="100%" stop-color="#20100A"/>
+        </linearGradient>
+        <radialGradient id="gPalm" cx="42%" cy="34%" r="62%">
+          <stop offset="0%" stop-color="#7B4E36" stop-opacity=".85"/>
+          <stop offset="100%" stop-color="#7B4E36" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="gFlash" cx="16%" cy="50%" r="84%">
+          <stop offset="0%" stop-color="#FFFBEC"/>
+          <stop offset="36%" stop-color="#FFC94E"/>
+          <stop offset="100%" stop-color="#FF6A1E" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="gEmber" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#FF7A32" stop-opacity=".95"/>
+          <stop offset="55%" stop-color="#E8391A" stop-opacity=".45"/>
+          <stop offset="100%" stop-color="#E8391A" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <g id="zoom">
+        <g id="recoil">
+
+          <!-- ── グリップ（大型ターゲットタイプ） ── -->
+          <path d="M 258,144
+                   C 248,208 228,266 208,312
+                   Q 196,344 230,354
+                   L 314,338
+                   Q 342,331 332,304
+                   C 314,258 300,206 296,146 Z"
+                fill="url(#gWood)"/>
+          <ellipse cx="272" cy="238" rx="44" ry="62" fill="url(#gPalm)"/>
+          <path d="M 246,206 C 236,246 224,286 212,318" stroke="#8A5B41" stroke-opacity=".4" stroke-width="2.5" fill="none"/>
+          <path d="M 264,212 C 254,252 244,290 232,324" stroke="#8A5B41" stroke-opacity=".3" stroke-width="2.5" fill="none"/>
+          <path d="M 282,218 C 274,256 266,292 256,328" stroke="#8A5B41" stroke-opacity=".22" stroke-width="2.5" fill="none"/>
+          <circle cx="286" cy="246" r="7" fill="#C8A24B" opacity=".55"/>
+
+          <!-- ── アンダーラグ ── -->
+          <path d="M 404,204 L 668,204 Q 684,204 684,217 L 684,232 Q 684,243 668,243 L 404,243 Z" fill="url(#gSteel2)"/>
+          <rect x="384" y="212" width="296" height="11" rx="5.5" fill="#3F454C"/>
+
+          <!-- ── 銃身 ── -->
+          <path d="M 400,156 L 704,156 L 704,204 L 400,204 Z" fill="url(#gSteel)"/>
+          <rect x="400" y="158" width="304" height="3.5" fill="#828A93" opacity=".55"/>
+
+          <!-- ── ベンチレーテッドリブ ── -->
+          <path d="M 400,132 L 704,132 L 704,156 L 400,156 Z" fill="url(#gSteel2)"/>
+          <g fill="#0A0C0E" opacity=".88">
+            <rect x="430" y="137" width="10" height="14" rx="2.5"/>
+            <rect x="466" y="137" width="10" height="14" rx="2.5"/>
+            <rect x="502" y="137" width="10" height="14" rx="2.5"/>
+            <rect x="538" y="137" width="10" height="14" rx="2.5"/>
+            <rect x="574" y="137" width="10" height="14" rx="2.5"/>
+            <rect x="610" y="137" width="10" height="14" rx="2.5"/>
+            <rect x="646" y="137" width="10" height="14" rx="2.5"/>
+          </g>
+          <rect x="400" y="132" width="304" height="2.5" fill="#8B929B" opacity=".5"/>
+
+          <!-- ── フロントサイト ── -->
+          <path d="M 670,114 L 694,114 L 694,132 L 670,132 Z" fill="#22262A"/>
+          <rect x="690" y="114" width="4.5" height="18" fill="#C8563A" opacity=".85"/>
+
+          <!-- ── 銃口 ── -->
+          <ellipse cx="704" cy="180" rx="6" ry="23" fill="#08090A"/>
+
+          <!-- ── シリンダー ── -->
+          <g id="cyl">
+            <circle cx="342" cy="180" r="52" fill="url(#gCyl)"/>
+            <circle cx="342" cy="180" r="52" fill="none" stroke="#7C838C" stroke-opacity=".45"/>
+            <circle cx="342" cy="180" r="15" fill="#1A1D20" stroke="#5C636B" stroke-opacity=".5"/>
+            <g id="flutes"></g>
+          </g>
+
+          <!-- ── フレーム ── -->
+          <path d="M 250,122 Q 250,110 264,110 L 404,110 L 404,138 L 390,138 L 390,222 L 404,222 L 404,250 L 300,250 Q 286,250 286,236 L 286,148 L 250,148 Z"
+                fill="url(#gSteel)"/>
+          <rect x="250" y="112" width="154" height="2.5" fill="#8B929B" opacity=".5"/>
+
+          <!-- ── リアサイト ── -->
+          <path d="M 262,98 L 302,98 L 302,114 L 262,114 Z" fill="#1F2327"/>
+          <rect x="277" y="98" width="8" height="10" fill="#07080A"/>
+
+          <!-- ── シリンダーラッチ ── -->
+          <path d="M 256,157 L 292,157 L 292,175 L 256,175 Z" fill="#2C3136"/>
+
+          <!-- ── トリガーガード ── -->
+          <path d="M 292,250 Q 284,294 330,298 Q 378,300 390,262 L 390,250"
+                fill="none" stroke="url(#gSteel)" stroke-width="15" stroke-linecap="round"/>
+
+          <!-- ── トリガー ── -->
+          <g id="trig">
+            <path d="M 340,246 Q 349,268 340,286 Q 328,279 328,257 Q 328,248 340,246 Z" fill="#3A4046"/>
+          </g>
+
+          <!-- ── ハンマー ── -->
+          <g id="hammer">
+            <path d="M 262,148 L 244,114 Q 237,98 251,92 L 278,96 Q 289,101 287,114 L 282,144 Z" fill="#2E343A"/>
+            <path d="M 249,96 L 278,101" stroke="#727980" stroke-width="3.4" stroke-linecap="round" opacity=".7"/>
+            <path d="M 253,105 L 281,110" stroke="#727980" stroke-width="3.4" stroke-linecap="round" opacity=".5"/>
+            <path d="M 257,114 L 283,119" stroke="#727980" stroke-width="3.4" stroke-linecap="round" opacity=".35"/>
+          </g>
+          <circle cx="268" cy="146" r="4.5" fill="#5C636B"/>
+
+          <!-- ── 発砲エフェクト ── -->
+          <ellipse id="ember" cx="398" cy="180" rx="50" ry="58" fill="url(#gEmber)"/>
+          <circle id="wave" cx="704" cy="180" r="150" fill="none" stroke="#FFD9A0" stroke-width="3"/>
+
+          <g id="smoke">
+            <circle cx="716" cy="176" r="16" fill="#9A9188" opacity=".5"/>
+            <circle cx="738" cy="188" r="11" fill="#9A9188" opacity=".38"/>
+            <circle cx="730" cy="162" r="9" fill="#9A9188" opacity=".3"/>
+          </g>
+
+          <g id="flash-g">
+            <ellipse cx="752" cy="180" rx="74" ry="40" fill="url(#gFlash)"/>
+            <path d="M 704,180 L 812,146 L 776,180 L 812,214 Z" fill="#FFF0BE" opacity=".9"/>
+            <path d="M 704,180 L 760,132 L 748,178 L 774,140 Z" fill="#FFE08A" opacity=".7"/>
+          </g>
+
+        </g>
+      </g>
+    </svg>
+    <div class="vignette" id="vig"></div>
+    <div class="pulse" id="pulse"></div>
+    <div class="ring" id="ring"></div>
+  </div>
+
+  <div class="status">
+    <p class="status-main" id="statusMain">人数と あたりの数を きめてね</p>
+    <p class="status-sub" id="statusSub"></p>
+  </div>
+
+  <section class="panel" id="setup">
+    <div class="dials">
+      <div class="dial">
+        
+        <p class="dial-jp">人数</p>
+        <div class="dial-row">
+          <button class="step" id="pMinus" aria-label="人数を減らす">−</button>
+          <span class="dial-value" id="pVal">6</span>
+          <button class="step" id="pPlus" aria-label="人数を増やす">＋</button>
+        </div>
+      </div>
+      <div class="dial">
+        
+        <p class="dial-jp">当たり</p>
+        <div class="dial-row">
+          <button class="step" id="bMinus" aria-label="当たりを減らす">−</button>
+          <span class="dial-value" id="bVal">1</span>
+          <button class="step" id="bPlus" aria-label="当たりを増やす">＋</button>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="startBtn">スタート</button>
+    </div>
+  </section>
+
+  <section class="panel" id="play" hidden>
+    <div class="actions">
+      <button class="btn trigger" id="pullBtn">ひく</button>
+    </div>
+    <p class="hint">画面のどこを押してもOK</p>
+  </section>
+
+  <section class="panel" id="over" hidden>
+    <div class="actions">
+      <button class="btn primary" id="againBtn">もういちど</button>
+      <button class="btn ghost" id="resetBtn">さいしょから</button>
+    </div>
+  </section>
+
+  <button class="sound" id="soundBtn" aria-pressed="true">🔊 音あり</button>
+
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const NS = "http://www.w3.org/2000/svg";
+  const MIN_P = 2, MAX_P = 12;
+  const CX = 342, CY = 180;
+
+  const state = { people:6, hits:1, live:[], turn:0, phase:"setup", busy:false, sound:true };
+  const timers = [];
+  const after = (ms, fn) => timers.push(setTimeout(fn, ms));
+  const clearAll = () => { while (timers.length) clearTimeout(timers.pop()); };
+
+  const el = id => document.getElementById(id);
+  const cyl = el("cyl"), hammer = el("hammer"), trig = el("trig"),
+        recoil = el("recoil"), zoom = el("zoom"), vig = el("vig"),
+        mzFlash = el("flash-g"), wave = el("wave"), smoke = el("smoke"),
+        pulse = el("pulse"), ring = el("ring"), heat = el("heat"), ember = el("ember"),
+        box = document.querySelector(".frame-box"),
+        stage = el("stage"), flash = el("flash"),
+        statusMain = el("statusMain"), statusSub = el("statusSub");
+
+  const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  cyl.style.transformOrigin = CX + "px " + CY + "px";
+  hammer.style.transformOrigin = "268px 146px";
+  trig.style.transformOrigin = "334px 250px";
+  recoil.style.transformOrigin = "250px 330px";
+  zoom.style.transformOrigin = "420px 200px";
+
+  /* ══ 音 ══ */
+  let ac = null, bus = null;
+
+  /* やわらかく潰す曲線。音を大きくしても割れずに、密度だけが増す */
+  function satCurve(k){
+    const n = 2048, c = new Float32Array(n);
+    for (let i = 0; i < n; i++){
+      const x = i * 2 / n - 1;
+      c[i] = Math.tanh(k * x);
+    }
+    return c;
+  }
+
+  function audio(){
+    if (!ac){
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+
+      bus = ac.createGain();
+      bus.gain.value = 1;
+
+      /* スマホのスピーカーは低音がほとんど鳴らない。
+         その分の力を、実際に鳴る帯域へ寄せる */
+      const body = ac.createBiquadFilter();
+      body.type = "peaking";
+      body.frequency.value = 260; body.Q.value = .8; body.gain.value = 6;
+
+      const mid = ac.createBiquadFilter();
+      mid.type = "peaking";
+      mid.frequency.value = 950; mid.Q.value = .7; mid.gain.value = 5;
+
+      const pres = ac.createBiquadFilter();
+      pres.type = "peaking";
+      pres.frequency.value = 2800; pres.Q.value = .9; pres.gain.value = 5;
+
+      /* どうやっても鳴らない超低域は捨てて、余力を上に回す */
+      const cut = ac.createBiquadFilter();
+      cut.type = "highpass";
+      cut.frequency.value = 48; cut.Q.value = .7;
+
+      const sat = ac.createWaveShaper();
+      sat.curve = satCurve(2.2);
+      sat.oversample = "4x";
+
+      const lim = ac.createDynamicsCompressor();
+      lim.threshold.value = -7; lim.knee.value = 0; lim.ratio.value = 20;
+      lim.attack.value = .001; lim.release.value = .11;
+
+      const out = ac.createGain();
+      out.gain.value = 2.1;
+
+      bus.connect(cut).connect(body).connect(mid)
+         .connect(pres).connect(sat).connect(lim)
+         .connect(out).connect(ac.destination);
+    }
+    if (ac.state === "suspended") ac.resume();
+    return ac;
+  }
+
+  /* iOS は最初のタップまで音が出ないので、無音を一度鳴らして解錠する */
+  let unlocked = false;
+
+  function unlockAudio(){
+    if (unlocked) return;
+    try{
+      const ctx = audio();
+      const s = ctx.createBufferSource();
+      s.buffer = ctx.createBuffer(1, 1, 22050);
+      s.connect(ctx.destination); s.start(0);
+      unlocked = true;
+    }catch(e){}
+  }
+
+  /* 触覚：Capacitor があればネイティブ、なければ Vibration API */
+  const PATTERN = {
+    light:  22,
+    medium: 55,
+    beat:   [0, 34, 66, 52],              // ドクッ・ドクッ
+    feint:  [0, 45, 35, 25],              // 落ちかけて止まる
+    bang:   [0, 130, 45, 90, 40, 260]     // 発砲
+  };
+
+  const canBuzz = (() => {
+    try{ return !!navigator.vibrate; }catch(e){ return false; }
+  })();
+
+  function buzz(kind){
+    try{
+      const h = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+      if (h){
+        if (kind === "beat"){
+          h.impact({ style: "MEDIUM" });
+          setTimeout(() => h.impact({ style: "LIGHT" }), 100);
+          return;
+        }
+        h.impact({
+          style: (kind === "bang" || kind === "heavy") ? "HEAVY"
+               : (kind === "medium" || kind === "feint") ? "MEDIUM" : "LIGHT"
+        });
+        return;
+      }
+      if (canBuzz){
+        navigator.vibrate(PATTERN[kind] || PATTERN.light);
+      }
+    }catch(e){}
+  }
+
+  /* ためが長いので画面を消させない */
+  let wakeLock = null;
+
+  async function keepAwake(on){
+    try{
+      if (on && "wakeLock" in navigator && !wakeLock){
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLock.addEventListener("release", () => { wakeLock = null; });
+      } else if (!on && wakeLock){
+        await wakeLock.release();
+        wakeLock = null;
+      }
+    }catch(e){}
+  }
+
+  function noise(dur){
+    const ctx = audio();
+    const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const s = ctx.createBufferSource(); s.buffer = buf; return s;
+  }
+
+  /* 低い胴鳴り（機構が動いたときの重み） */
+  function thunk(freq, g, dur){
+    if (!state.sound) return;
+    const ctx = audio(), t = ctx.currentTime;
+    const o = ctx.createOscillator(), og = ctx.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(freq, t);
+    o.frequency.exponentialRampToValueAtTime(freq * .55, t + dur);
+    og.gain.setValueAtTime(g, t);
+    og.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(og).connect(bus);
+    o.start(t); o.stop(t + dur + .02);
+  }
+
+  /* 鋼の当たる音：立ち上がりの一撃＋不協和な共鳴 */
+  function mech(freq, g, dur){
+    if (!state.sound) return;
+    const ctx = audio(), t = ctx.currentTime;
+
+    // 立ち上がり
+    const s = noise(.03), hp = ctx.createBiquadFilter(), gn = ctx.createGain();
+    hp.type = "highpass"; hp.frequency.value = freq * .55;
+    gn.gain.setValueAtTime(g * 1.15, t);
+    gn.gain.exponentialRampToValueAtTime(.0001, t + Math.max(.006, dur * .5));
+    s.connect(hp).connect(gn).connect(bus);
+    s.start(t); s.stop(t + .04);
+
+    // 金属の共鳴（倍音を外して鋼らしく）
+    const r = noise(.02);
+    [[freq * .43, 30, .85], [freq * 1.0, 38, .6], [freq * 1.87, 24, .32]].forEach(([f, q, a]) => {
+      const bp = ctx.createBiquadFilter(), rg = ctx.createGain();
+      bp.type = "bandpass"; bp.frequency.value = f; bp.Q.value = q;
+      rg.gain.setValueAtTime(g * a * 1.5, t);
+      rg.gain.exponentialRampToValueAtTime(.0001, t + dur * 2.4 + .02);
+      r.connect(bp).connect(rg).connect(bus);
+    });
+    r.start(t); r.stop(t + .03);
+  }
+
+  const cockSound = () => {
+    buzz("light");
+    mech(1900, .5, .05); thunk(190, .5, .07);
+    after(130, () => { mech(2700, .42, .04); thunk(150, .35, .05); });
+  };
+  const ratchet   = () => { for (let i = 0; i < 3; i++) after(i * 80, () => mech(4300, .19, .016)); };
+  const dryFire   = () => { buzz("feint"); mech(2300, .95, .055); thunk(135, .8, .1); after(14, () => mech(5200, .4, .02)); };
+  const spinSound = () => { for (let i = 0; i < 14; i++) after(i * 76, () => mech(4100, .2, .015)); };
+
+  /* 心臓の鼓動：ドクッ・ドクッの二拍 */
+  function thump(g = .55, dub = .19){
+    if (!state.sound) return;
+    const ctx = audio(), t = ctx.currentTime;
+
+    const hit = (t0, amp, f0, f1, dur) => {
+      // 基音
+      const o = ctx.createOscillator(), og = ctx.createGain();
+      o.type = "sine";
+      o.frequency.setValueAtTime(f0, t0);
+      o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+      og.gain.setValueAtTime(.0001, t0);
+      og.gain.exponentialRampToValueAtTime(amp, t0 + .012);
+      og.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+      o.connect(og).connect(bus);
+      o.start(t0); o.stop(t0 + dur + .02);
+
+      // ノートPCのスピーカーでも聞こえるよう倍音を足す
+      const o2 = ctx.createOscillator(), o2g = ctx.createGain();
+      o2.type = "sine";
+      o2.frequency.setValueAtTime(f0 * 2.1, t0);
+      o2.frequency.exponentialRampToValueAtTime(f1 * 2.1, t0 + dur * .7);
+      o2g.gain.setValueAtTime(.0001, t0);
+      o2g.gain.exponentialRampToValueAtTime(amp * .5, t0 + .01);
+      o2g.gain.exponentialRampToValueAtTime(.0001, t0 + dur * .7);
+      o2.connect(o2g).connect(bus);
+      o2.start(t0); o2.stop(t0 + dur + .02);
+
+      // 肉を打つ質感
+      const n = noise(.1), lp = ctx.createBiquadFilter(), ng = ctx.createGain();
+      lp.type = "lowpass"; lp.frequency.value = 240;
+      ng.gain.setValueAtTime(amp * .7, t0);
+      ng.gain.exponentialRampToValueAtTime(.0001, t0 + .1);
+      n.connect(lp).connect(ng).connect(bus);
+      n.start(t0); n.stop(t0 + .11);
+
+      // 携帯のスピーカーで実際に体に来るのはこの帯域
+      const n2 = noise(.09), bp = ctx.createBiquadFilter(), n2g = ctx.createGain();
+      bp.type = "bandpass"; bp.frequency.value = 300; bp.Q.value = 1.5;
+      n2g.gain.setValueAtTime(amp * .95, t0);
+      n2g.gain.exponentialRampToValueAtTime(.0001, t0 + .085);
+      n2.connect(bp).connect(n2g).connect(bus);
+      n2.start(t0); n2.stop(t0 + .1);
+
+      // 打ちはじめの輪郭。これがないと small speaker では膨らんで消える
+      const n3 = noise(.03), bp3 = ctx.createBiquadFilter(), n3g = ctx.createGain();
+      bp3.type = "bandpass"; bp3.frequency.value = 780; bp3.Q.value = 1.1;
+      n3g.gain.setValueAtTime(amp * .5, t0);
+      n3g.gain.exponentialRampToValueAtTime(.0001, t0 + .03);
+      n3.connect(bp3).connect(n3g).connect(bus);
+      n3.start(t0); n3.stop(t0 + .04);
+    };
+
+    hit(t, g * 2.15, 106, 44, .18);        // ドクッ
+    hit(t + dub, g * 1.45, 88, 38, .13);   // ドクッ
+  }
+
+  /* 発砲 */
+  function bangSound(){
+    if (!state.sound) return;
+    const ctx = audio(), t = ctx.currentTime;
+
+    // 立ち上がりの破裂
+    const crack = noise(.1), hp = ctx.createBiquadFilter(), cg = ctx.createGain();
+    hp.type = "highpass"; hp.frequency.value = 2000;
+    cg.gain.setValueAtTime(2.2, t);
+    cg.gain.exponentialRampToValueAtTime(.0001, t + .1);
+    crack.connect(hp).connect(cg).connect(bus);
+    crack.start(t); crack.stop(t + .11);
+
+    // 本体
+    const body = noise(1.1), lp = ctx.createBiquadFilter(), bg = ctx.createGain();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(11000, t);
+    lp.frequency.exponentialRampToValueAtTime(120, t + .55);
+    bg.gain.setValueAtTime(1.9, t);
+    bg.gain.exponentialRampToValueAtTime(.0001, t + 1.0);
+    body.connect(lp).connect(bg);
+
+    // 部屋の反響
+    const dl = ctx.createDelay(.5), fb = ctx.createGain(), wet = ctx.createGain();
+    dl.delayTime.value = .105; fb.gain.value = .42; wet.gain.value = .62;
+    bg.connect(bus); bg.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(bus);
+    body.start(t); body.stop(t + 1.1);
+
+    // 腹に来る低音
+    const o = ctx.createOscillator(), og = ctx.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(165, t);
+    o.frequency.exponentialRampToValueAtTime(22, t + .38);
+    og.gain.setValueAtTime(1.7, t);
+    og.gain.exponentialRampToValueAtTime(.0001, t + .5);
+    o.connect(og).connect(bus);
+    o.start(t); o.stop(t + .52);
+
+    // 耳鳴り
+    const r1 = ctx.createOscillator(), r2 = ctx.createOscillator(), rg = ctx.createGain();
+    r1.type = "sine"; r1.frequency.value = 4180;
+    r2.type = "sine"; r2.frequency.value = 6250;
+    rg.gain.setValueAtTime(.0001, t + .05);
+    rg.gain.exponentialRampToValueAtTime(.11, t + .13);
+    rg.gain.exponentialRampToValueAtTime(.0001, t + 2.1);
+    r1.connect(rg); r2.connect(rg); rg.connect(bus);
+    r1.start(t + .05); r2.start(t + .05);
+    r1.stop(t + 2.2); r2.stop(t + 2.2);
+  }
+
+  /* ためのドローン */
+  let drone = null;
+
+  function droneOn(dur){
+    if (!state.sound) return;
+    const ctx = audio(), t = ctx.currentTime;
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(),
+          lp = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = "sawtooth"; o.frequency.setValueAtTime(40, t);
+    o.frequency.linearRampToValueAtTime(52, t + dur / 1000);
+    o2.type = "sine"; o2.frequency.setValueAtTime(81, t);
+    o2.frequency.linearRampToValueAtTime(104, t + dur / 1000);
+    lp.type = "lowpass"; lp.frequency.value = 260;
+    g.gain.setValueAtTime(.001, t);
+    g.gain.exponentialRampToValueAtTime(.26, t + dur / 1000);
+    o.connect(lp); o2.connect(lp); lp.connect(g).connect(bus);
+    o.start(t); o2.start(t);
+    drone = { o, o2, g };
+  }
+
+  function droneOff(){
+    if (!drone) return;
+    const ctx = audio(), t = ctx.currentTime;
+    drone.g.gain.cancelScheduledValues(t);
+    drone.g.gain.setValueAtTime(drone.g.gain.value, t);
+    drone.g.gain.exponentialRampToValueAtTime(.0001, t + .05);
+    drone.o.stop(t + .07); drone.o2.stop(t + .07);
+    drone = null;
+  }
+
+  /* ══ シリンダー ══ */
+  function buildFlutes(){
+    const g = el("flutes");
+    g.textContent = "";
+    const n = state.people;
+    for (let i = 0; i < n; i++){
+      const f = document.createElementNS(NS, "rect");
+      f.setAttribute("x", CX - 6.5); f.setAttribute("y", CY - 45);
+      f.setAttribute("width", 13); f.setAttribute("height", 26); f.setAttribute("rx", 6.5);
+      f.setAttribute("transform", `rotate(${(i * 360) / n} ${CX} ${CY})`);
+      f.style.fill = "rgba(9,11,13,.74)";
+      g.appendChild(f);
+    }
+    const dot = document.createElementNS(NS, "circle");
+    dot.setAttribute("cx", CX); dot.setAttribute("cy", CY - 32);
+    dot.setAttribute("r", 5.5); dot.setAttribute("fill", "#C8A24B");
+    g.appendChild(dot);
+  }
+
+  function say(main, sub = "", tone = ""){
+    statusMain.textContent = main;
+    statusMain.className = "status-main" + (tone ? " " + tone : "");
+    statusSub.textContent = sub;
+  }
+
+  /* ══ 設定 ══ */
+  function syncSetup(){
+    state.hits = Math.max(1, Math.min(state.hits, state.people - 1));
+    el("pVal").textContent = state.people;
+    el("bVal").textContent = state.hits;
+    el("pMinus").disabled = state.people <= MIN_P;
+    el("pPlus").disabled = state.people >= MAX_P;
+    el("bMinus").disabled = state.hits <= 1;
+    el("bPlus").disabled = state.hits >= state.people - 1;
+    el("eyebrow").textContent = `${state.people}人 で あたり ${state.hits}つ`;
+
+    buildFlutes();
+    cyl.style.transform = "rotate(0deg)";
+    hammer.style.transform = "rotate(0deg)";
+    trig.style.transform = "rotate(0deg)";
+    zoom.style.transform = "scale(1)";
+    vig.classList.remove("on");
+    calm();
+
+    const pct = Math.round((state.hits / state.people) * 100);
+    say("人数と あたりの数を きめてね", `ひとりあたり ${pct}%`);
+  }
+
+  /* ══ ゲーム ══ */
+  function start(){
+    clearAll();
+    state.live = Array(state.people).fill(false);
+    const idx = Array.from({ length: state.people }, (_, i) => i);
+    for (let i = idx.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [idx[i], idx[j]] = [idx[j], idx[i]];
+    }
+    idx.slice(0, state.hits).forEach(i => state.live[i] = true);
+
+    state.turn = 0; state.phase = "play"; state.busy = true;
+
+    buildFlutes();
+    vig.classList.remove("on");
+    calm();
+    zoom.style.transform = "scale(1)";
+    hammer.style.transform = "rotate(0deg)";
+    trig.style.transform = "rotate(0deg)";
+
+    el("setup").hidden = true;
+    el("over").hidden = true;
+    el("play").hidden = false;
+    el("pullBtn").disabled = true;
+
+    keepAwake(true);
+    spinSound();
+    say("装填中…", "シリンダーを回しています");
+
+    const dur = reduced() ? 60 : 1100;
+    cyl.style.transition = `transform ${dur}ms cubic-bezier(.1,.72,.2,1)`;
+    cyl.style.transform = "rotate(1800deg)";
+
+    after(dur + 60, () => {
+      cyl.style.transition = "none";
+      cyl.style.transform = "rotate(0deg)";
+      requestAnimationFrame(() => cyl.style.transition = "");
+      state.busy = false;
+      turnPrompt();
+    });
+  }
+
+  function turnPrompt(){
+    const left = state.people - state.turn;
+    const liveLeft = state.live.slice(state.turn).filter(Boolean).length;
+    el("pullBtn").disabled = false;
+    box.classList.add("armed");
+    say(`${state.turn + 1}人目のばん`, `のこり ${left}人 に あたり ${liveLeft}つ`);
+  }
+
+  /* 心拍に合わせて画面の縁が赤く脈打つ */
+  function pulseBeat(level){
+    pulse.style.transition = "opacity .06s ease, transform .08s ease";
+    pulse.style.opacity = level;
+    pulse.style.transform = "scale(" + (1 + level * .07) + ")";
+    ring.classList.remove("go"); void ring.offsetWidth; ring.classList.add("go");
+    after(90, () => {
+      pulse.style.transition = "opacity .34s ease, transform .34s ease";
+      pulse.style.opacity = level * .26;
+      pulse.style.transform = "scale(.97)";
+    });
+  }
+
+  /* 「落ちるか」と思わせて止まるフェイント */
+  function feint(){
+    buzz("medium");
+    mech(2600, .7, .05); thunk(160, .55, .07);
+    box.classList.remove("tense");
+    hammer.style.transition = "transform .05s cubic-bezier(.4,0,1,1)";
+    hammer.style.transform = "rotate(-19deg)";
+    pulseBeat(1);
+    box.classList.add("jolt");
+    after(90, () => {
+      hammer.style.transition = "transform .16s cubic-bezier(.2,1.5,.4,1)";
+      hammer.style.transform = "rotate(-34deg)";
+      mech(3600, .3, .03);
+    });
+    after(300, () => {
+      box.classList.remove("jolt");
+      hammer.style.transition = "";
+      box.classList.add("tense");
+    });
+  }
+
+  function calm(){
+    box.classList.remove("tense", "tr1", "tr2", "tr3", "jolt");
+    pulse.style.transition = "opacity .5s ease, transform .5s ease";
+    pulse.style.opacity = 0;
+    pulse.style.transform = "scale(.97)";
+    heat.style.opacity = 0;
+    ember.style.opacity = 0;
+  }
+
+  function pull(){
+    if (state.phase !== "play" || state.busy) return;
+    state.busy = true;
+    el("pullBtn").disabled = true;
+    box.classList.remove("armed");
+
+    const i = state.turn;
+    const fast = reduced();
+    audio();
+
+    // ① 撃鉄を起こす
+    cockSound();
+    hammer.style.transform = "rotate(-34deg)";
+    trig.style.transform = "rotate(18deg)";
+
+    // ② シリンダーを一コマ送る
+    after(fast ? 20 : 170, () => {
+      ratchet();
+      cyl.style.transform = `rotate(${(i + 1) * (360 / state.people)}deg)`;
+    });
+
+    const holdMs = fast ? 120 : 4500 + Math.random() * 1500;  // ための長さ
+    const silence = fast ? 20 : 520;                          // 発砲直前の無音
+    const T0 = fast ? 40 : 560;                               // ため開始
+
+    // ③ ため — 視界が狭まり、熱が上がり、鼓動が速まる
+    after(T0, () => {
+      droneOn(holdMs);
+      vig.classList.remove("snap");
+      vig.classList.add("on");
+      box.classList.add("tense");
+      zoom.classList.remove("snapback");
+      zoom.style.transform = "scale(1.06)";
+      heat.style.opacity = ".55";
+      say("…", "しずかに…");
+
+      if (fast) return;
+
+      // 寄りが段階的に強くなる
+      after(holdMs * .45, () => zoom.style.transform = "scale(1.13)");
+      after(holdMs * .82, () => zoom.style.transform = "scale(1.19)");
+
+      // 銃が熱を帯びる
+      after(holdMs * .35, () => ember.style.opacity = ".3");
+      after(holdMs * .68, () => ember.style.opacity = ".6");
+      after(holdMs * .9,  () => { ember.style.opacity = ".9"; heat.style.opacity = ".9"; });
+
+      // 手の震えが大きくなる
+      after(holdMs * .22, () => box.classList.add("tr1"));
+      after(holdMs * .55, () => { box.classList.remove("tr1"); box.classList.add("tr2"); });
+      after(holdMs * .8,  () => { box.classList.remove("tr2"); box.classList.add("tr3"); });
+
+      // 鼓動：だんだん速く、画面の縁も脈打つ
+      let t = 0, gap = 950;
+      while (t < holdMs - silence - 80){
+        const g = .6 + .9 * (t / holdMs);
+        const dub = Math.min(.2, gap * .00034);
+        after(T0 + t, () => {
+          thump(g, dub);
+          buzz("beat");
+          pulseBeat(.22 + .55 * g);
+          after(dub * 1000, () => pulseBeat(.15 + .38 * g));
+        });
+        t += gap;
+        gap = Math.max(350, gap * .84);
+      }
+
+      // 落ちるかと思わせるフェイント（毎回1〜3回、位置はランダム）
+      const nFeints = 1 + Math.floor(Math.random() * 3);
+      const lo = 1300, hi = holdMs - silence - 900;
+      for (let k = 0; k < nFeints && hi > lo; k++){
+        const at = lo + Math.random() * (hi - lo);
+        after(T0 + at, feint);
+      }
+
+      // 点が増えていく
+      [1000, 1900, 2800, 3700, 4600].forEach((d, k) => {
+        if (d < holdMs - silence) after(T0 + d, () => say("…".repeat(k + 2), "しずかに…", "hold"));
+      });
+    });
+
+    // ④ 無音の一拍
+    after(fast ? 60 : T0 + holdMs - silence, () => {
+      droneOff();
+      box.classList.remove("tr1", "tr2", "tr3");
+      pulse.style.transition = "opacity .18s ease, transform .18s ease";
+      pulse.style.opacity = 0;
+      pulse.style.transform = "scale(.97)";
+      say("", "");
+    });
+
+    // ⑤ 撃鉄が落ちる
+    after(fast ? 100 : T0 + holdMs, () => {
+      calm();
+      hammer.style.transition = "transform .06s cubic-bezier(.4,0,1,1)";
+      hammer.style.transform = "rotate(0deg)";
+      trig.style.transform = "rotate(0deg)";
+      box.classList.remove("tense");
+      after(120, () => hammer.style.transition = "");
+
+      vig.classList.add("snap");
+      vig.classList.remove("on");
+      zoom.classList.add("snapback");
+      zoom.style.transform = "scale(1)";
+
+      if (state.live[i]){
+        buzz("bang");
+        bangSound();
+        mzFlash.classList.remove("fire"); void mzFlash.getBBox(); mzFlash.classList.add("fire");
+        wave.classList.remove("go"); void wave.getBBox(); wave.classList.add("go");
+        smoke.classList.remove("go"); void smoke.getBBox(); smoke.classList.add("go");
+        flash.classList.remove("fire"); void flash.offsetWidth; flash.classList.add("fire");
+        stage.classList.remove("shake"); void stage.offsetWidth; stage.classList.add("shake");
+        recoil.style.transform = "rotate(-11deg) translate(34px,-16px)";
+        after(150, () => recoil.style.transform = "rotate(0deg) translate(0,0)");
+        say(`${i + 1}人目 あたり！`, "きまり", "bang");
+      } else {
+        dryFire();
+        say(`${i + 1}人目 セーフ`, "たすかった", "safe");
+      }
+
+      state.turn++;
+
+      after(state.live[i] ? 1600 : 900, () => {
+        state.busy = false;
+        const liveLeft = state.live.slice(state.turn).filter(Boolean).length;
+        if (state.turn >= state.people || liveLeft === 0) finish();
+        else turnPrompt();
+      });
+    });
+  }
+
+  function finish(){
+    state.phase = "over";
+    keepAwake(false);
+    el("play").hidden = true;
+    el("over").hidden = false;
+    const hits = state.live.map((v, i) => v ? i + 1 : 0).filter(Boolean);
+    say(`あたりは ${hits.join("・")}人目`, `${state.people}人中 ${hits.length}人`, "bang");
+  }
+
+  function toSetup(){
+    clearAll();
+    keepAwake(false);
+    state.phase = "setup";
+    el("over").hidden = true;
+    el("play").hidden = true;
+    el("setup").hidden = false;
+    syncSetup();
+  }
+
+  /* ══ 操作 ══ */
+  ["touchstart", "pointerdown", "keydown"].forEach(ev =>
+    document.addEventListener(ev, unlockAudio, { passive: true }));
+
+  document.addEventListener("gesturestart", e => e.preventDefault());
+  document.addEventListener("dblclick", e => e.preventDefault());
+
+  // 銃そのものをタップしても引ける（スマホでは狙いやすい）
+  box.addEventListener("click", () => { if (state.phase === "play") pull(); });
+
+  // バックグラウンドに回ったら、ためを中断して引き直しにする
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden"){
+      if (state.phase === "play" && state.busy){
+        clearAll(); droneOff(); calm();
+        vig.classList.add("snap"); vig.classList.remove("on");
+        zoom.style.transform = "scale(1)";
+        hammer.style.transform = "rotate(0deg)";
+        trig.style.transform = "rotate(0deg)";
+        state.busy = false;
+        turnPrompt();
+      }
+      keepAwake(false);
+    } else if (state.phase === "play"){
+      keepAwake(true);
+    }
+  });
+
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => window.scrollTo(0, 0), 250);
+  });
+
+  el("pMinus").onclick = () => { state.people = Math.max(MIN_P, state.people - 1); mech(4200,.16,.014); syncSetup(); };
+  el("pPlus").onclick  = () => { state.people = Math.min(MAX_P, state.people + 1); mech(4200,.16,.014); syncSetup(); };
+  el("bMinus").onclick = () => { state.hits--; mech(4200,.16,.014); syncSetup(); };
+  el("bPlus").onclick  = () => { state.hits++; mech(4200,.16,.014); syncSetup(); };
+  el("startBtn").onclick = start;
+  el("againBtn").onclick = start;
+  el("resetBtn").onclick = toSetup;
+  el("pullBtn").onclick = pull;
+
+  el("soundBtn").onclick = e => {
+    state.sound = !state.sound;
+    e.currentTarget.textContent = state.sound ? "🔊 音あり" : "🔇 音なし";
+    e.currentTarget.setAttribute("aria-pressed", String(state.sound));
+    if (!state.sound) droneOff(); else mech(4200, .22, .016);
+  };
+
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space" || e.key === " "){
+      e.preventDefault();
+      if (state.phase === "play") pull();
+      else start();
+    }
+  });
+
+  syncSetup();
+})();
+</script>
+</body>
+</html>
