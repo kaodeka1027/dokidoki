@@ -501,6 +501,23 @@
 
   .panel,.dials,.actions{position:relative;z-index:6}
 
+  .notice{
+    text-align:center;font-size:13px;letter-spacing:.06em;
+    color:#C8A24B;opacity:.9;line-height:1.7;
+    padding:9px 12px;border-radius:999px;
+    background:rgba(200,162,75,.07);
+    box-shadow:inset 0 0 0 1px rgba(200,162,75,.2);
+  }
+
+  /* 始まったら余計なものを消して、銃だけを見せる */
+  body.playing .masthead{display:none}
+  body.playing .hint{opacity:.45}
+  body.playing .stage{gap:10px}
+  body.playing .frame-box{
+    box-shadow:inset 0 0 0 1px rgba(200,162,75,.2), 0 26px 60px rgba(0,0,0,.7);
+  }
+  #svg{transition:none}
+
   /* 銃そのものも引き金として押せる */
   .frame-box{cursor:pointer}
   .frame-box.armed{box-shadow:inset 0 0 0 1px rgba(216,57,28,.4), 0 20px 46px rgba(0,0,0,.55)}
@@ -743,6 +760,7 @@
     <div class="actions">
       <button class="btn primary" id="startBtn">スタート</button>
     </div>
+    <p class="notice">🔊 音量を最大にすると、いちばん怖い</p>
   </section>
 
   <section class="panel" id="play" hidden>
@@ -770,6 +788,10 @@
   const NS = "http://www.w3.org/2000/svg";
   const MIN_P = 2, MAX_P = 12;
   const CX = 342, CY = 180;
+
+  const svgEl = document.getElementById("svg");
+  const WIDE_VIEW  = "150 84 640 300";   // 設定画面：銃の全体が見える
+  const CLOSE_VIEW = "238 125 464 218";  // プレイ中：銃に寄る
 
   const state = { people:6, hits:1, live:[], turn:0, phase:"setup", busy:false, sound:true };
   const timers = [];
@@ -832,20 +854,27 @@
       cut.type = "highpass";
       cut.frequency.value = 48; cut.Q.value = .7;
 
+      /* 深く飽和させると、音量を上げなくても密度が増して大きく聞こえる */
       const sat = ac.createWaveShaper();
-      sat.curve = satCurve(2.2);
+      sat.curve = satCurve(3.0);
       sat.oversample = "4x";
 
+      /* 大きい音を抑えて、その分だけ全体を持ち上げる */
       const lim = ac.createDynamicsCompressor();
-      lim.threshold.value = -7; lim.knee.value = 0; lim.ratio.value = 20;
-      lim.attack.value = .001; lim.release.value = .11;
+      lim.threshold.value = -14; lim.knee.value = 0; lim.ratio.value = 14;
+      lim.attack.value = .0015; lim.release.value = .09;
 
       const out = ac.createGain();
-      out.gain.value = 2.1;
+      out.gain.value = 4.2;
+
+      /* 最後に角を丸めて、割れる寸前で止める */
+      const safe = ac.createWaveShaper();
+      safe.curve = satCurve(1.0);
+      safe.oversample = "2x";
 
       bus.connect(cut).connect(body).connect(mid)
          .connect(pres).connect(sat).connect(lim)
-         .connect(out).connect(ac.destination);
+         .connect(out).connect(safe).connect(ac.destination);
     }
     if (ac.state === "suspended") ac.resume();
     return ac;
@@ -1180,6 +1209,10 @@
     el("play").hidden = false;
     el("pullBtn").disabled = true;
 
+    // 銃を画面いっぱいに寄せ、余計なものを消す
+    document.body.classList.add("playing");
+    svgEl.setAttribute("viewBox", CLOSE_VIEW);
+
     keepAwake(true);
     spinSound();
     say("装填中…", "シリンダーを回しています");
@@ -1269,9 +1302,18 @@
       cyl.style.transform = `rotate(${(i + 1) * (360 / state.people)}deg)`;
     });
 
-    const holdMs = fast ? 120 : 4500 + Math.random() * 1500;  // ための長さ
-    const silence = fast ? 20 : 520;                          // 発砲直前の無音
-    const T0 = fast ? 40 : 560;                               // ため開始
+    // ための長さ。毎回まったく違う長さを引くことで身構えられなくする
+    function drawHold(){
+      const r = Math.random();
+      if (r < .20) return 1000 + Math.random() *  800;  // 1.0〜1.8秒 いきなり来る
+      if (r < .48) return 2000 + Math.random() * 1300;  // 2.0〜3.3秒
+      if (r < .80) return 3600 + Math.random() * 1800;  // 3.6〜5.4秒
+      return              5800 + Math.random() * 1900;  // 5.8〜7.7秒 じらす
+    }
+
+    const holdMs  = fast ? 120 : drawHold();
+    const silence = fast ? 20  : Math.min(520, holdMs * .3);  // 発砲直前の無音
+    const T0      = fast ? 40  : 560;                         // ため開始
 
     // ③ ため — 視界が狭まり、熱が上がり、鼓動が速まる
     after(T0, () => {
@@ -1301,8 +1343,8 @@
       after(holdMs * .8,  () => { box.classList.remove("tr2"); box.classList.add("tr3"); });
 
       // 鼓動：だんだん速く、画面の縁も脈打つ
-      let t = 0, gap = 950;
-      while (t < holdMs - silence - 80){
+      let t = 0, gap = holdMs < 2600 ? 480 : 950;
+      while (t < holdMs - silence - 60){
         const g = .6 + .9 * (t / holdMs);
         const dub = Math.min(.2, gap * .00034);
         after(T0 + t, () => {
@@ -1316,8 +1358,9 @@
       }
 
       // 落ちるかと思わせるフェイント（毎回1〜3回、位置はランダム）
-      const nFeints = 1 + Math.floor(Math.random() * 3);
-      const lo = 1300, hi = holdMs - silence - 900;
+      const nFeints = holdMs < 2200 ? Math.floor(Math.random() * 2)
+                                     : 1 + Math.floor(Math.random() * 3);
+      const lo = Math.max(600, holdMs * .28), hi = holdMs - silence - 550;
       for (let k = 0; k < nFeints && hi > lo; k++){
         const at = lo + Math.random() * (hi - lo);
         after(T0 + at, feint);
@@ -1382,6 +1425,8 @@
 
   function finish(){
     state.phase = "over";
+    document.body.classList.remove("playing");
+    svgEl.setAttribute("viewBox", WIDE_VIEW);
     keepAwake(false);
     el("play").hidden = true;
     el("over").hidden = false;
@@ -1393,6 +1438,8 @@
     clearAll();
     keepAwake(false);
     state.phase = "setup";
+    document.body.classList.remove("playing");
+    svgEl.setAttribute("viewBox", WIDE_VIEW);
     el("over").hidden = true;
     el("play").hidden = true;
     el("setup").hidden = false;
