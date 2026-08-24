@@ -36,6 +36,7 @@
   }
 
   body{
+    min-height:100vh;
     min-height:100dvh;
     background:radial-gradient(110% 70% at 50% 24%, #262120 0%, transparent 62%), var(--ink);
     color:var(--bone);
@@ -492,7 +493,13 @@
     box-shadow:0 0 0 rgba(0,0,0,.4), 0 2px 5px rgba(0,0,0,.3);
   }
 
-  .btn,.step,.sound{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  .btn,.step,.sound{
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+    position:relative;z-index:6;pointer-events:auto;
+  }
+
+  .panel,.dials,.actions{position:relative;z-index:6}
 
   /* 銃そのものも引き金として押せる */
   .frame-box{cursor:pointer}
@@ -537,6 +544,19 @@
 </style>
 </head>
 <body>
+<noscript>
+  <div style="position:fixed;inset:0;z-index:99;background:#12100F;color:#EFE7DA;
+              display:flex;align-items:center;justify-content:center;padding:28px;
+              font-family:'Hiragino Maru Gothic ProN','Hiragino Sans',sans-serif;text-align:center">
+    <div style="max-width:420px;line-height:1.85">
+      <p style="font-size:21px;color:#C8A24B;margin-bottom:14px">Safari で開いてください</p>
+      <p style="font-size:15px">いまはファイルのプレビュー画面で表示されています。<br>
+      この画面ではボタンが動きません。</p>
+      <p style="font-size:15px;margin-top:14px">配布用の URL から開くと、そのまま遊べます。</p>
+    </div>
+  </div>
+</noscript>
+
 
 <div class="heat" id="heat"></div>
 <div class="flash" id="flash"></div>
@@ -776,13 +796,56 @@
   /* ══ 音 ══ */
   let ac = null, bus = null;
 
+  /* やわらかく潰す曲線。音を大きくしても割れずに、密度だけが増す */
+  function satCurve(k){
+    const n = 2048, c = new Float32Array(n);
+    for (let i = 0; i < n; i++){
+      const x = i * 2 / n - 1;
+      c[i] = Math.tanh(k * x);
+    }
+    return c;
+  }
+
   function audio(){
     if (!ac){
       ac = new (window.AudioContext || window.webkitAudioContext)();
-      bus = ac.createDynamicsCompressor();
-      bus.threshold.value = -12; bus.ratio.value = 14;
-      bus.attack.value = .002; bus.release.value = .25;
-      bus.connect(ac.destination);
+
+      bus = ac.createGain();
+      bus.gain.value = 1;
+
+      /* スマホのスピーカーは低音がほとんど鳴らない。
+         その分の力を、実際に鳴る帯域へ寄せる */
+      const body = ac.createBiquadFilter();
+      body.type = "peaking";
+      body.frequency.value = 260; body.Q.value = .8; body.gain.value = 6;
+
+      const mid = ac.createBiquadFilter();
+      mid.type = "peaking";
+      mid.frequency.value = 950; mid.Q.value = .7; mid.gain.value = 5;
+
+      const pres = ac.createBiquadFilter();
+      pres.type = "peaking";
+      pres.frequency.value = 2800; pres.Q.value = .9; pres.gain.value = 5;
+
+      /* どうやっても鳴らない超低域は捨てて、余力を上に回す */
+      const cut = ac.createBiquadFilter();
+      cut.type = "highpass";
+      cut.frequency.value = 48; cut.Q.value = .7;
+
+      const sat = ac.createWaveShaper();
+      sat.curve = satCurve(2.2);
+      sat.oversample = "4x";
+
+      const lim = ac.createDynamicsCompressor();
+      lim.threshold.value = -7; lim.knee.value = 0; lim.ratio.value = 20;
+      lim.attack.value = .001; lim.release.value = .11;
+
+      const out = ac.createGain();
+      out.gain.value = 2.1;
+
+      bus.connect(cut).connect(body).connect(mid)
+         .connect(pres).connect(sat).connect(lim)
+         .connect(out).connect(ac.destination);
     }
     if (ac.state === "suspended") ac.resume();
     return ac;
@@ -803,15 +866,35 @@
   }
 
   /* 触覚：Capacitor があればネイティブ、なければ Vibration API */
+  const PATTERN = {
+    light:  22,
+    medium: 55,
+    beat:   [0, 34, 66, 52],              // ドクッ・ドクッ
+    feint:  [0, 45, 35, 25],              // 落ちかけて止まる
+    bang:   [0, 130, 45, 90, 40, 260]     // 発砲
+  };
+
+  const canBuzz = (() => {
+    try{ return !!navigator.vibrate; }catch(e){ return false; }
+  })();
+
   function buzz(kind){
     try{
       const h = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
       if (h){
-        h.impact({ style: kind === "heavy" ? "HEAVY" : kind === "medium" ? "MEDIUM" : "LIGHT" });
+        if (kind === "beat"){
+          h.impact({ style: "MEDIUM" });
+          setTimeout(() => h.impact({ style: "LIGHT" }), 100);
+          return;
+        }
+        h.impact({
+          style: (kind === "bang" || kind === "heavy") ? "HEAVY"
+               : (kind === "medium" || kind === "feint") ? "MEDIUM" : "LIGHT"
+        });
         return;
       }
-      if (navigator.vibrate){
-        navigator.vibrate(kind === "heavy" ? [0, 70, 45, 130] : kind === "medium" ? 32 : 11);
+      if (canBuzz){
+        navigator.vibrate(PATTERN[kind] || PATTERN.light);
       }
     }catch(e){}
   }
@@ -884,7 +967,7 @@
     after(130, () => { mech(2700, .42, .04); thunk(150, .35, .05); });
   };
   const ratchet   = () => { for (let i = 0; i < 3; i++) after(i * 80, () => mech(4300, .19, .016)); };
-  const dryFire   = () => { buzz("medium"); mech(2300, .95, .055); thunk(135, .8, .1); after(14, () => mech(5200, .4, .02)); };
+  const dryFire   = () => { buzz("feint"); mech(2300, .95, .055); thunk(135, .8, .1); after(14, () => mech(5200, .4, .02)); };
   const spinSound = () => { for (let i = 0; i < 14; i++) after(i * 76, () => mech(4100, .2, .015)); };
 
   /* 心臓の鼓動：ドクッ・ドクッの二拍 */
@@ -918,14 +1001,30 @@
       // 肉を打つ質感
       const n = noise(.1), lp = ctx.createBiquadFilter(), ng = ctx.createGain();
       lp.type = "lowpass"; lp.frequency.value = 240;
-      ng.gain.setValueAtTime(amp * .55, t0);
+      ng.gain.setValueAtTime(amp * .7, t0);
       ng.gain.exponentialRampToValueAtTime(.0001, t0 + .1);
       n.connect(lp).connect(ng).connect(bus);
       n.start(t0); n.stop(t0 + .11);
+
+      // 携帯のスピーカーで実際に体に来るのはこの帯域
+      const n2 = noise(.09), bp = ctx.createBiquadFilter(), n2g = ctx.createGain();
+      bp.type = "bandpass"; bp.frequency.value = 300; bp.Q.value = 1.5;
+      n2g.gain.setValueAtTime(amp * .95, t0);
+      n2g.gain.exponentialRampToValueAtTime(.0001, t0 + .085);
+      n2.connect(bp).connect(n2g).connect(bus);
+      n2.start(t0); n2.stop(t0 + .1);
+
+      // 打ちはじめの輪郭。これがないと small speaker では膨らんで消える
+      const n3 = noise(.03), bp3 = ctx.createBiquadFilter(), n3g = ctx.createGain();
+      bp3.type = "bandpass"; bp3.frequency.value = 780; bp3.Q.value = 1.1;
+      n3g.gain.setValueAtTime(amp * .5, t0);
+      n3g.gain.exponentialRampToValueAtTime(.0001, t0 + .03);
+      n3.connect(bp3).connect(n3g).connect(bus);
+      n3.start(t0); n3.stop(t0 + .04);
     };
 
-    hit(t, g * 1.6, 106, 44, .18);        // ドクッ
-    hit(t + dub, g * 1.05, 88, 38, .13);  // ドクッ
+    hit(t, g * 2.15, 106, 44, .18);        // ドクッ
+    hit(t + dub, g * 1.45, 88, 38, .13);   // ドクッ
   }
 
   /* 発砲 */
@@ -1208,8 +1307,7 @@
         const dub = Math.min(.2, gap * .00034);
         after(T0 + t, () => {
           thump(g, dub);
-          buzz("light");
-          after(dub * 1000, () => buzz("light"));
+          buzz("beat");
           pulseBeat(.22 + .55 * g);
           after(dub * 1000, () => pulseBeat(.15 + .38 * g));
         });
@@ -1256,7 +1354,7 @@
       zoom.style.transform = "scale(1)";
 
       if (state.live[i]){
-        buzz("heavy");
+        buzz("bang");
         bangSound();
         mzFlash.classList.remove("fire"); void mzFlash.getBBox(); mzFlash.classList.add("fire");
         wave.classList.remove("go"); void wave.getBBox(); wave.classList.add("go");
